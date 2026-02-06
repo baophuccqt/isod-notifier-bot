@@ -1,0 +1,1 @@
+worker: python isod_bot.py
