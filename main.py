@@ -3,6 +3,9 @@ import json
 import time
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ========== CẤU HÌNH ==========
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8243204723:AAHYnvEoYdT7WRm6CjN0tohw1qtXIaDZoN0")
