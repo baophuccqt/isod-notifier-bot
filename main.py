@@ -1,4 +1,6 @@
 import requests
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import time
 import os
@@ -224,6 +226,10 @@ def main():
     print(f"👤 Username  : {ISOD_USERNAME}")
     print(f"⏰ Interval  : {CHECK_INTERVAL}s")
 
+    # Khởi động health check server trong background thread
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
+
     redis_ok = check_redis_config()
     if redis_ok:
         print("✅ Redis đã được cấu hình — trạng thái sẽ được persist qua restart")
@@ -248,3 +254,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ========== HEALTH CHECK SERVER ==========
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, format, *args):
+        pass  # Tắt log request để không spam console
+
+def start_health_server():
+    port = int(os.environ.get("PORT", "8000"))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    print(f"🌐 Health check server chạy trên port {port}")
+    server.serve_forever()
