@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import os
+import sys
 import threading
 from datetime import datetime
 from dotenv import load_dotenv
@@ -211,5 +212,18 @@ def main():
             print(f"❌ Lỗi không mong muốn: {e}")
             time.sleep(60)
 
+def run_once():
+    """Chạy kiểm tra ISOD đúng 1 lần rồi thoát (dùng cho cron)."""
+    print(f"🚀 ISOD check (one-shot) — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if not check_redis_config():
+        print("⚠️  Redis chưa cấu hình — trạng thái sẽ KHÔNG persist giữa các lần chạy cron!")
+    try:
+        check_isod_notifications()
+    except Exception as e:
+        print(f"❌ Lỗi khi chạy: {e}")
+
 if __name__ == "__main__":
-    main()
+    if "--once" in sys.argv or os.environ.get("RUN_ONCE") == "1":
+        run_once()
+    else:
+        main()
