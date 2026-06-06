@@ -1,0 +1,26 @@
+name: Keepalive
+
+# GitHub tự tắt scheduled workflow nếu repo không có commit nào trong 60 ngày.
+# Workflow này tạo 1 commit rỗng mỗi tháng (ngày 1, 03:00 UTC) để reset đồng hồ đó,
+# nên bot ISOD chạy mãi mà bạn không phải tự commit lại.
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'    # 03:00 UTC ngày 1 hằng tháng (~30 ngày < 60 ngày)
+  workflow_dispatch:         # chạy thử thủ công được
+
+permissions:
+  contents: write            # cần quyền push commit
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Empty commit to keep the repo active
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive [skip ci]"
+          git push

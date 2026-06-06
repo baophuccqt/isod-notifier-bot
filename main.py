@@ -27,11 +27,11 @@ def load_env_file(path=None):
 load_env_file()
 
 # ========== CẤU HÌNH ==========
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8243204723:AAHYnvEoYdT7WRm6CjN0tohw1qtXIaDZoN0")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "6850792800")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-ISOD_USERNAME = os.environ.get("ISOD_USERNAME", "nghiabaophuc.ho")
-ISOD_API_KEY = os.environ.get("ISOD_API_KEY", "odoaVcuhIdEDvPVmHPWCqA")
+ISOD_USERNAME = os.environ.get("ISOD_USERNAME")
+ISOD_API_KEY = os.environ.get("ISOD_API_KEY")
 ISOD_BASE_URL = "https://isod.ee.pw.edu.pl/isod-portal/wapi?"
 
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "120"))
@@ -192,6 +192,20 @@ def check_isod_notifications():
     save_fingerprint(current_fingerprint)
 
 # ========== MAIN ==========
+def check_required_env():
+    """Bắt buộc phải có các secret. Thiếu thì thoát ngay với thông báo rõ ràng."""
+    required = {
+        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+        "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
+        "ISOD_USERNAME": ISOD_USERNAME,
+        "ISOD_API_KEY": ISOD_API_KEY,
+    }
+    missing = [name for name, val in required.items() if not val]
+    if missing:
+        print("❌ Thiếu biến môi trường bắt buộc: " + ", ".join(missing))
+        print("   Đặt qua file .env (local) hoặc GitHub Secrets (Actions).")
+        sys.exit(1)
+
 def check_redis_config():
     if not UPSTASH_REDIS_REST_URL or not UPSTASH_REDIS_REST_TOKEN:
         print("⚠️  Chưa set UPSTASH_REDIS_REST_URL hoặc UPSTASH_REDIS_REST_TOKEN!")
@@ -199,6 +213,7 @@ def check_redis_config():
     return True
 
 def main():
+    check_required_env()
     print("🚀 ISOD Telegram Bot đã khởi động!")
     print(f"👤 Username  : {ISOD_USERNAME}")
     print(f"⏰ Interval  : {CHECK_INTERVAL}s")
@@ -231,6 +246,7 @@ def main():
 def run_once():
     """Chạy kiểm tra ISOD đúng 1 lần rồi thoát (dùng cho cron)."""
     print(f"🚀 ISOD check (one-shot) — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    check_required_env()
     if not check_redis_config():
         print("⚠️  Redis chưa cấu hình — trạng thái sẽ KHÔNG persist giữa các lần chạy cron!")
     try:

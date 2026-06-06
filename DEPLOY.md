@@ -139,6 +139,59 @@ tail -f ~/isodBot/bot.log     # xem log chạy real-time (Ctrl+C để thoát)
 
 ---
 
+## Cách 2 — Deploy bằng GitHub Actions (không cần server riêng)
+
+Thay vì cron trên server PW, có thể để **GitHub tự dựng máy ảo Ubuntu mỗi 5 phút**,
+chạy `main.py --once` rồi tắt. Miễn phí, không cần SSH/VPN. Trạng thái vẫn lưu trên
+Upstash Redis — máy ảo bị xoá sau mỗi lần chạy nên **bắt buộc** dùng Redis (file
+`last_fingerprint.txt` / `seen_hashes.json` sẽ không được giữ lại).
+
+Đã có sẵn 2 workflow trong `.github/workflows/`:
+- `check.yml` — chạy bot mỗi 5 phút (và bấm chạy tay được).
+- `keepalive.yml` — tạo 1 commit rỗng mỗi tháng. GitHub tự tắt scheduled workflow nếu
+  repo **không có commit nào trong 60 ngày** (workflow chạy KHÔNG tính là hoạt động,
+  chỉ commit mới tính), nên file này giữ cho bot chạy mãi mà không phải tự đụng tay.
+
+### B1 — Khai báo Secrets (KHÔNG để token trong code)
+
+Trên GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
+Tạo đúng 6 cái tên dưới đây (giá trị lấy từ `.env`):
+
+| Secret | Nội dung |
+|---|---|
+| `ISOD_USERNAME` | username ISOD |
+| `ISOD_API_KEY` | API key ISOD |
+| `TELEGRAM_BOT_TOKEN` | token bot Telegram |
+| `TELEGRAM_CHAT_ID` | chat ID Telegram |
+| `UPSTASH_REDIS_REST_URL` | URL Upstash Redis |
+| `UPSTASH_REDIS_REST_TOKEN` | token Upstash Redis |
+
+> Tên secret phải khớp y hệt — đây là tên `main.py` đọc qua `os.environ.get(...)`.
+
+### B2 — Bật quyền ghi cho keepalive
+
+**Settings → Actions → General → Workflow permissions** → chọn
+**"Read and write permissions"** → Save. (Để `keepalive.yml` push được commit rỗng;
+nếu không, keepalive sẽ lỗi 403.)
+
+### B3 — Push code lên GitHub
+
+```bash
+git add main.py .github/workflows/
+git commit -m "deploy qua github actions"
+git push
+```
+
+### B4 — Chạy thử
+
+Tab **Actions** → workflow **"ISOD Notifier"** → **Run workflow**. Mở log step
+"Run checker (one-shot)" xem có lỗi không. Sau đó cứ mỗi ~5 phút nó tự chạy.
+
+> Cron của GitHub **không đúng giờ tuyệt đối**, lúc tải cao có thể trễ 5–15 phút —
+> đây là giới hạn của GitHub, không phải lỗi bot.
+
+---
+
 ## Bảo trì
 
 - **Tạm dừng bot:** `crontab -e` rồi xoá dòng `*/5 ...` (hoặc thêm `#` đầu dòng).
@@ -147,11 +200,16 @@ tail -f ~/isodBot/bot.log     # xem log chạy real-time (Ctrl+C để thoát)
 - **Xem bot có lỗi không:** `grep ❌ ~/isodBot/bot.log`.
 - **Đổi tần suất:** sửa `*/5` (vd `*/10` = 10 phút).
 
-## Bảo mật (nên làm sau khi chạy ổn)
+## Bảo mật
 
-Token Telegram, API key ISOD, token Upstash đang hardcode trong `main.py` (đã commit
-git) và trong `.env`. Nên:
-1. Tạo lại (rotate) Telegram bot token qua @BotFather, tạo lại Upstash token, đổi
-   ISOD API key nếu portal cho phép.
-2. Xoá các giá trị hardcode trong `main.py`, chỉ đọc từ `.env`.
-3. `.gitignore` đã chặn `.env` khỏi git từ giờ.
+✅ **Đã làm:** `main.py` không còn hardcode secret — chỉ đọc từ biến môi trường
+(`.env` khi chạy local, GitHub Secrets khi chạy Actions). Hàm `check_required_env()`
+báo lỗi rõ ràng và thoát nếu thiếu biến.
+
+⚠️ **Còn phải làm:** token Telegram và API key ISOD trước đây bị hardcode nên **vẫn
+nằm trong lịch sử git** (`git log -p` moi ra được). Bắt buộc:
+1. **Rotate token đã lộ:** tạo lại Telegram bot token qua `@BotFather` (`/revoke`),
+   tạo lại ISOD API key trên portal nếu cho phép.
+2. Cập nhật token mới vào **cả** `.env` (local) lẫn **GitHub Secrets**.
+3. `.env` đã được `.gitignore` (token Upstash chỉ nằm trong `.env`, chưa từng bị
+   commit → an toàn).
