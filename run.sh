@@ -10,5 +10,12 @@ if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 1048576 ]; then
   tail -n 500 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 fi
 
+# Dùng python trong venv nếu có, không thì dùng python3 hệ thống (cài --user).
+if [ -x ./venv/bin/python ]; then
+  PY=./venv/bin/python
+else
+  PY=python3
+fi
+
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') =====" >> "$LOG"
-exec ./venv/bin/python main.py --once >> "$LOG" 2>&1
+exec "$PY" main.py --once >> "$LOG" 2>&1

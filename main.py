@@ -5,10 +5,26 @@ import os
 import sys
 import threading
 from datetime import datetime
-from dotenv import load_dotenv
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-load_dotenv()
+
+def load_env_file(path=None):
+    """Đọc .env thủ công — không phụ thuộc python-dotenv (hợp Python 3.6+)."""
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+load_env_file()
 
 # ========== CẤU HÌNH ==========
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8243204723:AAHYnvEoYdT7WRm6CjN0tohw1qtXIaDZoN0")

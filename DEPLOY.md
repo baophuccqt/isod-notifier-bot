@@ -76,17 +76,26 @@ rsync -avz \
 > Lưu ý: `.env` **được** copy (chứa secrets, cần cho Redis). Đừng đưa `.env` lên
 > git/public repo.
 
-## Bước 4 — Tạo virtualenv + cài thư viện (trên server)
+## Bước 4 — Cài thư viện (trên server)
+
+> Server dùng **Python 3.6.9** nên `requirements.txt` đã ghim `requests==2.27.1`
+> (bản cuối còn hỗ trợ 3.6) và bỏ `python-dotenv` (code tự đọc `.env`).
 
 ```bash
 ssh "$SERVER"
 cd ~/isodBot
 python3 -m venv venv
-./venv/bin/pip install --upgrade pip
+./venv/bin/pip install --upgrade "pip<22"     # pip mới đã bỏ Python 3.6
 ./venv/bin/pip install -r requirements.txt
 ```
-- Nếu `pip install` lỗi mạng (không ra được pypi.org), thử thêm proxy của trường,
-  hoặc báo mình.
+
+- Nếu `python3 -m venv venv` báo lỗi (thiếu gói `python3-venv`, không có sudo) →
+  bỏ qua venv, cài vào thư mục home của bạn:
+  ```bash
+  python3 -m pip install --user -r requirements.txt
+  ```
+  `run.sh` đã tự nhận biết: không có venv thì dùng `python3` hệ thống.
+- Nếu `pip install` lỗi mạng (không ra được pypi.org) → thử proxy của trường hoặc báo mình.
 
 ## Bước 5 — Chạy thử 1 lần (trên server)
 
