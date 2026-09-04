@@ -202,14 +202,33 @@ Tab **Actions** → workflow **"ISOD Notifier"** → **Run workflow**. Mở log 
 
 ## Bảo mật
 
-✅ **Đã làm:** `main.py` không còn hardcode secret — chỉ đọc từ biến môi trường
-(`.env` khi chạy local, GitHub Secrets khi chạy Actions). Hàm `check_required_env()`
-báo lỗi rõ ràng và thoát nếu thiếu biến.
+### Sự cố đã xảy ra (04/09/2026)
 
-⚠️ **Còn phải làm:** token Telegram và API key ISOD trước đây bị hardcode nên **vẫn
-nằm trong lịch sử git** (`git log -p` moi ra được). Bắt buộc:
-1. **Rotate token đã lộ:** tạo lại Telegram bot token qua `@BotFather` (`/revoke`),
-   tạo lại ISOD API key trên portal nếu cho phép.
-2. Cập nhật token mới vào **cả** `.env` (local) lẫn **GitHub Secrets**.
-3. `.env` đã được `.gitignore` (token Upstash chỉ nằm trong `.env`, chưa từng bị
-   commit → an toàn).
+Token Telegram bị hardcode trong `isod_bot.py` từ commit đầu tiên và trong `main.py`
+tới `28f3b7c`. Repo để **public** → bot quét GitHub nhặt được token và chiếm bot: chúng
+gọi `setMyName` / `setMyDescription` / `setMyPhoto` để biến bot thành quảng cáo cho một
+bot VPN (có lúc đổi tên thành "AI PORN", có lúc thành "#FREEVPN … @vpn38_bot"). Username
+`IsodNotifier_bot` không bị đổi vì việc đó chỉ làm được qua BotFather.
+
+Đã xử lý xong:
+1. ✅ Revoke token qua `@BotFather` — token cũ giờ trả `401 Unauthorized`.
+2. ✅ Tạo lại ISOD API key trên portal.
+3. ✅ Khôi phục tên / mô tả / ảnh đại diện của bot.
+4. ✅ Cập nhật secret mới vào `.env` và GitHub Secrets.
+5. ✅ Xoá hẳn `isod_bot.py` — bản cũ trùng lặp, không ai chạy mà vẫn ôm secret
+   (`main.py` đã gỡ hardcode từ `28f3b7c`). `Procfile` chuyển sang `main.py`.
+
+### Quy tắc từ giờ
+
+- Secret **chỉ** đọc từ biến môi trường: `.env` khi chạy local, GitHub Secrets khi chạy
+  Actions. `main.py` có `check_required_env()` — thiếu biến thì thoát ngay kèm thông báo
+  rõ, chứ không im lặng chạy sai.
+- Chỉ giữ **một** entry point là `main.py`. Đừng nhân bản script ra file thứ hai: mỗi bản
+  sao là thêm một chỗ có thể lọt secret.
+- `.env` nằm trong `.gitignore`. Cần thêm biến mới thì khai báo tên (không kèm giá trị)
+  trong `.env.example`.
+- Token Upstash chưa từng bị commit → không cần rotate.
+
+⚠️ Lịch sử git vẫn còn token cũ (`git log -p` moi ra được) và GitHub vẫn giữ commit cũ
+truy cập qua SHA kể cả sau khi rewrite. Vì đã rotate nên các giá trị đó thành vô hại;
+nếu muốn sạch hẳn thì để repo private hoặc xoá rồi tạo lại repo.

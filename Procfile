@@ -1,1 +1,1 @@
-worker: python isod_bot.py
+worker: python main.py
